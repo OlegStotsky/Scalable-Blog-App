@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cache = require('./services/cache');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
