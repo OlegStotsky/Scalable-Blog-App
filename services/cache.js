@@ -10,7 +10,16 @@ client.set = util.promisify(client.set);
 
 const exec = mongoose.Query.prototype.exec;
 
+mongoose.Query.prototype.cache = async function() {
+    this.useCache = true;
+    return this;
+}
+
 mongoose.Query.prototype.exec = async function() {
+  if (!this.useCache) {
+      return exec.apply(this, arguments);
+  }
+
   const cacheKey = JSON.stringify(
     Object.assign({}, this.getQuery(), {
       collection: this.mongooseCollection.name
