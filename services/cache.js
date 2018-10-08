@@ -5,13 +5,14 @@ const Maybe = require("folktale/maybe");
 
 const redisUrl = "redis://localhost:6379";
 const client = redis.createClient(redisUrl);
-client.get = util.promisify(client.get);
-client.set = util.promisify(client.set);
+client.hget = util.promisify(client.hget);
+client.hset = util.promisify(client.hset);
 
 const exec = mongoose.Query.prototype.exec;
 
-mongoose.Query.prototype.cache = async function() {
+mongoose.Query.prototype.cache = async function(options={}) {
     this.useCache = true;
+    this.hashKey = JSON.stringify(options.key || '');
     return this;
 }
 
@@ -25,7 +26,7 @@ mongoose.Query.prototype.exec = async function() {
       collection: this.mongooseCollection.name
     })
   );
-  const cacheValue = await client.get(cacheKey);
+  const cacheValue = await client.hget(this.hashKey, cacheKey);
   const maybeCacheValue = cacheValue ? Maybe.Just(cacheValue) : Maybe.Nothing();
   return maybeCacheValue.matchWith({
         Just: ({ value }) => {
@@ -36,7 +37,7 @@ mongoose.Query.prototype.exec = async function() {
         },
         Nothing: async () => {
           const queryResult = await exec.apply(this, arguments);
-          await client.set(cacheKey, JSON.stringify(queryResult));
+          await client.hset(this.hashKey, cacheKey, JSON.stringify(queryResult), 'EX', 10);
           return queryResult;
         }
       });
