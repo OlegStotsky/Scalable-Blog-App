@@ -35,7 +35,7 @@ class CustomPage {
       value: sig,
       url: 'http://localhost'
     });
-    await this.page.reload();
+    await this.page.goto('localhost:3000/blogs')
     await this.page.waitFor('a[href="/auth/logout');
   }
 
