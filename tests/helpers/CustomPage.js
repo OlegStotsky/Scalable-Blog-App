@@ -1,0 +1,43 @@
+const puppeteer = require('puppeteer');
+const userFactory = require('../factories/userFactory');
+const sessionFactory = require('../factories/sessionFactory');
+
+class CustomPage {
+  static async build() {
+    const browser = await puppeteer.launch({
+      headless: false
+    });
+    const page = await browser.newPage();
+    const customPage = new CustomPage(page);
+
+    return new Proxy(customPage, {
+      get: (target, property) => {
+        return browser[property] || customPage[property] || page[property];
+      }
+    });
+  }
+
+  constructor(page) {
+    this.page = page;
+  }
+
+  async login() {
+    const user = await userFactory();
+    const { session, sig } = sessionFactory(user);
+
+    await this.page.setCookie({
+      name: 'session',
+      value: session,
+      url: 'http://localhost'
+    });
+    await this.page.setCookie({
+      name: 'session.sig',
+      value: sig,
+      url: 'http://localhost'
+    });
+    await this.page.reload();
+    await this.page.waitFor('a[href="/auth/logout');
+  }
+}
+
+module.exports = CustomPage;
